@@ -1,6 +1,6 @@
 // Bump this on every deploy that changes any precached file, so old clients
 // pick up the new version instead of being stuck on a stale cache forever.
-const CACHE_VERSION = 'cork-grader-3-v1';
+const CACHE_VERSION = 'cork-grader-3-v2';
 
 const PRECACHE_URLS = [
   './',

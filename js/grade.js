@@ -21,7 +21,12 @@ const offscreenCtx = offscreen.getContext('2d');
 async function getSharedStream() {
   if (sharedStream) return sharedStream;
   sharedStream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' } },
+    // "ideal" is a soft hint -- the browser still picks the closest mode it
+    // supports. Without this, some browsers default a live preview stream to
+    // a much lower resolution than the camera is actually capable of, which
+    // under-detects the small/shallow pores the grading pipeline was tuned
+    // to see in full-resolution reference photos.
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1920 } },
     audio: false,
   });
   return sharedStream;
@@ -265,6 +270,15 @@ async function handleManualGrade() {
   drawNormalizedDisk(offscreenCtx, video, calibrationPixels.transform, { canvasSize: CANVAS_SIZE, diskPx: DISK_PX });
   try {
     const result = measureDisk(offscreen, diameterMm);
+    // Every real disc in the reference set had dozens of detected pores at
+    // minimum, even at the cleanest (Extra) grade -- a reading of zero means
+    // the capture failed (out of focus, lens cap, nothing in frame), not
+    // that a flawless disc was found. Don't log a grade for a failed capture.
+    if (result.numPores === 0) {
+      setResultOverlay(null);
+      $('grade-status').textContent = 'No texture detected -- likely an out-of-focus or empty capture. Not logged; try again.';
+      return;
+    }
     await commitGrade(result, offscreen, diameterMm);
   } catch (err) {
     $('grade-status').textContent = err.message;
